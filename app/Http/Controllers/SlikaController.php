@@ -39,9 +39,12 @@ class SlikaController extends Controller
             'dostupna'   => 'sometimes|boolean',
             'cena_min'   => 'sometimes|numeric|min:0',
             'cena_max'   => 'sometimes|numeric|min:0',
-            'visina_cm'  => 'sometimes|integer|min:1',
-            'sirina_cm'  => 'sometimes|integer|min:1',
+            'visina_cm_min'  => 'sometimes|integer|min:0',
+            'visina_cm_max'  => 'sometimes|integer|min:0',
+            'sirina_cm_min'  => 'sometimes|integer|min:0',
+            'sirina_cm_max'  => 'sometimes|integer|min:0',
             'sort_cena'  => 'sometimes|in:asc,desc',
+            'sort_starost'=> 'sometimes|in:asc,desc',
             'tehnike'    => 'sometimes|array|min:1',
             'tehnike.*'  => 'integer|exists:tehnike,id',
         ]);
@@ -50,20 +53,31 @@ class SlikaController extends Controller
 
         $query=Slika::with(['tehnike']);
         
+        // $ukupanBrojSlika=$query->count();
+        
         if($request->filled('dostupna')){
             $query->where('dostupna',$request->get('dostupna')); //isto kao $query=$query->where...
         }
+
         if($request->filled('cena_min')){
             $query->where('cena','>=',$request->get('cena_min'));
         }
         if($request->filled('cena_max')){
             $query->where('cena','<=',$request->get('cena_max'));
         }
-        if($request->filled('visina_cm')){
-            $query->where('visina_cm',$request->get('visina_cm'));
+
+        if($request->filled('visina_cm_min')){
+            $query->where('visina_cm','>=',$request->get('visina_cm_min'));
         }
-        if($request->filled('sirina_cm')){
-            $query->where('sirina_cm',$request->get('sirina_cm'));
+        if($request->filled('visina_cm_max')){
+            $query->where('visina_cm','<=',$request->get('visina_cm_max'));
+        }
+
+        if($request->filled('sirina_cm_min')){
+            $query->where('sirina_cm','>=',$request->get('sirina_cm_min'));
+        }
+        if($request->filled('sirina_cm_max')){
+            $query->where('sirina_cm','<=',$request->get('sirina_cm_max'));
         }
 
 
@@ -89,9 +103,22 @@ class SlikaController extends Controller
                 $query->orderBy('cena', $request->get('sort_cena'));
         }
 
-        $paginator=$query->paginate($perPage);
+        if($request->filled('sort_starost') && 
+            in_array($request->get('sort_starost'),['asc','desc'])){
 
-        return SlikaResource::collection($paginator);
+                $query->orderBy('created_at',$request->get('sort_starost'));
+        }
+
+        $paginator=$query->paginate($perPage);
+        
+        // $ukupanBrojStrana=$ukupanBrojSlika/$perPage;
+        //ceil kao round (samo zaokruzuje na najveci integer)
+
+        // return SlikaResource::collection($paginator);
+        return response()->json([
+            'slike' => SlikaResource::collection($paginator),
+            'ukupanBrojStrana'=> $paginator->lastPage() 
+            ] ,200);
     }
 
     /*
